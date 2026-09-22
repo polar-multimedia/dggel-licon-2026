@@ -192,6 +192,24 @@
     return x + ancho;
   }
 
+  // Subrayado "a mano": trazo ligeramente irregular que se dibuja de izquierda a derecha
+  async function subrayar(x1, x2, y) {
+    const pasos = 6, dx = (x2 - x1) / pasos;
+    let d = `M${x1},${y + 2}`;
+    for (let i = 1; i <= pasos; i++) {
+      const cx = x1 + dx * (i - 0.5), cy = y + (i % 2 ? -2.5 : 2.5) + (Math.random() - 0.5) * 2;
+      d += ` Q${cx.toFixed(1)},${cy.toFixed(1)} ${(x1 + dx * i).toFixed(1)},${(y + (i === pasos ? -1 : 1) * 1.5).toFixed(1)}`;
+    }
+    const n = el('path', { d, 'stroke-width': 5, class: 'subrayado' }, firma);
+    const L = n.getTotalLength();
+    n.style.strokeDasharray = L + ' ' + L;
+    n.style.strokeDashoffset = L;
+    n.style.transition = 'stroke-dashoffset 380ms ease-out';
+    n.getBoundingClientRect();
+    n.style.strokeDashoffset = 0;
+    await espera(400);
+  }
+
   // ---------- Animación de un registro ----------
   function reset() {
     $('tarjeta').classList.remove('vibra');
@@ -237,9 +255,13 @@
     const GAP = 60, margen = 60, sizeGrupo = 64;
     const anchoGrupo = fuente ? anchoReal(grupoTxt, sizeGrupo).w : 470;
     const maxNombre = F.w - 2 * margen - GAP - anchoGrupo;
-    const finNombre = await escribir(reg.nombre, F.x + margen, F.y + 135, 120, maxNombre, 1);
+    await escribir(reg.nombre, F.x + margen, F.y + 135, 120, maxNombre, 1);
     await espera(250);
-    await escribir(grupoTxt, finNombre + GAP, F.y + 135, sizeGrupo, anchoGrupo + 10, 1.4);
+    // Grupo alineado a la derecha de la franja, y subrayado a mano
+    const xGrupo = F.x + F.w - margen - anchoGrupo;
+    await escribir(grupoTxt, xGrupo, F.y + 135, sizeGrupo, anchoGrupo + 10, 1.4);
+    await espera(120);
+    await subrayar(xGrupo - 6, xGrupo + anchoGrupo + 10, F.y + 160);
   }
 
   async function idle() {
