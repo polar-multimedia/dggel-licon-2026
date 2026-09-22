@@ -22,6 +22,9 @@
   .estela.on { opacity: .9; }
   .estela.pos { transition-duration: .9s; }
 
+  #liquidosVacio { opacity: 1; transition: opacity 2.2s ease-in-out; }
+  #liquidosVacio.gel { opacity: 0; }
+
   .resultado { opacity: 0; transition: opacity .6s; }
   .resultado.on { opacity: 1; }
 
@@ -56,6 +59,8 @@
   <g id="tarjeta">
     <!-- 1. Lo que asoma por las ventanas: gel con sangrado y ventana blanca del nombre -->
     <image id="liquidos" href="../assets/foto/liquidos.png" x="0" y="0" width="1448" height="1086"/>
+    <!-- 1b. Estado inicial: tubos "vacíos" (A y B con tinte tenue, el resto transparente); se funde al gel durante el centrifugado -->
+    <image id="liquidosVacio" href="../assets/foto/liquidos_vacio.png" x="0" y="0" width="1448" height="1086"/>
     <!-- 2. Sedimentos animados (por columna) -->
     <g id="tubos"></g>
     <!-- 3. Nombre manuscrito -->
@@ -182,6 +187,7 @@
   // ---------- Animación de un registro ----------
   function reset() {
     $('tarjeta').classList.remove('vibra');
+    $('liquidosVacio').classList.remove('gel');
     tubos.forEach(t => {
       t.gota.classList.remove('on', 'off');
       t.estela.classList.remove('on', 'pos');
@@ -200,6 +206,7 @@
     await espera(1300);
     // 2. centrifugado: los glóbulos bajan
     $('tarjeta').classList.add('vibra');
+    $('liquidosVacio').classList.add('gel'); // el gel toma cuerpo durante el centrifugado
     await espera(500);
     tubos.forEach((t, i) => setTimeout(() => {
       t.gota.classList.add('off');
