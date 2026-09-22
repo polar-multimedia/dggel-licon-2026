@@ -22,7 +22,7 @@ Stack Polar: GitHub Pages + Firebase Realtime Database (ver skill `polar-event-d
 2. La tarjeta vibra (centrifugado) y los glóbulos bajan: en los pocillos **positivos** quedan
    atrapados en la superficie del gel (banda roja); en los **negativos** atraviesan el gel y
    forman un botón en el fondo.
-3. Se escribe a mano el nombre y el grupo (fuente Homemade Apple, trazo por trazo con opentype.js).
+3. Se escribe a mano el nombre y el grupo (fuente Shadows Into Light, trazo por trazo con opentype.js).
 4. Reposo configurable (10 s por default) y sigue el siguiente de la cola; sin cola, modo espera
    con la leyenda "Escanea el código y escribe tu historia".
 

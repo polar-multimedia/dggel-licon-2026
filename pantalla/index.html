@@ -37,7 +37,7 @@
 
   #firma path { fill: none; stroke: #16246b; stroke-linecap: round; stroke-linejoin: round; }
   #firma path.lleno { fill: #16246b; stroke-width: 0 !important; transition: fill .3s; }
-  #firma text { font-family: 'Homemade Apple', cursive; fill: #16246b; }
+  #firma text { font-family: 'Shadows Into Light', cursive; fill: #16246b; }
 
   #hud { position: absolute; left: 12px; bottom: 10px; font: 12px/1.4 system-ui, sans-serif; color: #7a7a7a; opacity: 0; transition: opacity .3s; }
   body.hud #hud { opacity: 1; }
@@ -151,17 +151,23 @@
 
   // ---------- Escritura a mano (opentype.js) ----------
   let fuente = null;
-  opentype.load('../assets/fonts/HomemadeApple.ttf', (err, f) => { if (!err) fuente = f; else console.warn('fuente', err); });
+  opentype.load('../assets/fonts/ShadowsIntoLight.ttf', (err, f) => { if (!err) fuente = f; else console.warn('fuente', err); });
 
   function limpiarFirma() { while (firma.firstChild) firma.removeChild(firma.firstChild); }
 
-  // Escribe texto trazo por trazo. Devuelve promesa que resuelve al terminar.
+  // Ancho real (caja de los trazos, no el avance) de un texto a cierto tamaño
+  function anchoReal(texto, size) {
+    const bb = fuente.getPath(texto, 0, 0, size).getBoundingBox();
+    return { w: bb.x2, x1: bb.x1 };
+  }
+
+  // Escribe texto trazo por trazo. Devuelve promesa que resuelve con la x donde termina el trazo.
   async function escribir(texto, x, y, size, maxW, velocidad = 1) {
     if (!fuente) { // respaldo sin opentype: texto plano con la fuente vía CSS
-      const t = el('text', { x, y, 'font-size': size }, firma); t.textContent = texto; return;
+      const t = el('text', { x, y, 'font-size': size }, firma); t.textContent = texto; return x + maxW;
     }
-    let ancho = fuente.getAdvanceWidth(texto, size);
-    if (ancho > maxW) { size = size * maxW / ancho; }
+    let ancho = anchoReal(texto, size).w;
+    if (ancho > maxW) { size = size * maxW / ancho; ancho = anchoReal(texto, size).w; }
     const paths = fuente.getPaths(texto, x, y, size);
     const grosor = Math.max(3, size * 0.05);
     const trazos = [];
@@ -183,6 +189,7 @@
       await espera(dur * 0.85);
       n.classList.add('lleno');
     }
+    return x + ancho;
   }
 
   // ---------- Animación de un registro ----------
@@ -225,9 +232,14 @@
     $('tarjeta').classList.remove('vibra');
     // 3. nombre manuscrito y grupo
     await espera(300);
-    await escribir(reg.nombre, F.x + 60, F.y + 135, 120, F.w - 620, 1);
+    // El grupo se escribe después del nombre; el nombre se encoge si hace falta para que quepan los dos
+    const grupoTxt = NOMBRES[reg.grupo] || reg.grupo;
+    const GAP = 60, margen = 60, sizeGrupo = 64;
+    const anchoGrupo = fuente ? anchoReal(grupoTxt, sizeGrupo).w : 470;
+    const maxNombre = F.w - 2 * margen - GAP - anchoGrupo;
+    const finNombre = await escribir(reg.nombre, F.x + margen, F.y + 135, 120, maxNombre, 1);
     await espera(250);
-    await escribir(NOMBRES[reg.grupo] || reg.grupo, F.x + F.w - 520, F.y + 135, 64, 470, 1.4);
+    await escribir(grupoTxt, finNombre + GAP, F.y + 135, sizeGrupo, anchoGrupo + 10, 1.4);
   }
 
   async function idle() {
