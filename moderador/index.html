@@ -38,9 +38,11 @@
     <div class="estado" style="margin-top:10px" id="cola">0<small>en cola</small></div>
     <div style="margin-top:14px">
       <button id="pausa" class="verde">Pausar cola</button>
+      <button id="mascara">Máscara virtual: —</button>
       <label>Reposo tras cada tarjeta <input id="reposo" type="number" min="3" max="60" value="10" style="width:70px"> s</label>
     </div>
-    <p style="font-size:13px;color:#9aa5ad;margin-top:12px">Vistas: <a href="../pantalla/" target="_blank">pantalla</a> · <a href="../registro/" target="_blank">registro</a>. En la pantalla: <b>F</b> pantalla completa, <b>M</b> ocultar cuerpo blanco (instalación real), <b>H</b> datos, <b>1–8</b> prueba.</p>
+    <p style="font-size:13px;color:#9aa5ad;margin-top:8px"><b>Máscara virtual</b> = la foto de la tarjeta dibujada en pantalla (para previsualizar). Con la máscara física montada, apágala: la pantalla muestra solo gel, sedimentos y la ventana del nombre, con sangrado para que la máscara real no tenga que atinar.</p>
+    <p style="font-size:13px;color:#9aa5ad;margin-top:12px">Vistas: <a href="../pantalla/" target="_blank">pantalla</a> · <a href="../registro/" target="_blank">registro</a>. En la pantalla: <b>F</b> pantalla completa, <b>M</b> máscara virtual on/off (solo local), <b>H</b> datos, <b>1–8</b> prueba.</p>
   </div>
 
   <div class="card">
@@ -74,14 +76,18 @@
   if (BUS.DEMO) $('demo').textContent = 'MODO DEMO (sin Firebase)';
   GRUPOS.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = NOMBRES[g]; $('grupo').appendChild(o); });
 
-  let pausa = false;
+  let pausa = false, mascara = true;
   BUS.onControl(c => {
     pausa = !!c.pausa;
+    mascara = (typeof c.mascara === 'boolean') ? c.mascara : true;
+    $('mascara').textContent = 'Máscara virtual: ' + (mascara ? 'ENCENDIDA' : 'APAGADA');
+    $('mascara').className = mascara ? '' : 'rojo';
     $('pausa').textContent = pausa ? 'Reanudar cola' : 'Pausar cola';
     $('pausa').className = pausa ? 'rojo' : 'verde';
     if (typeof c.reposo === 'number' && document.activeElement !== $('reposo')) $('reposo').value = c.reposo;
   });
   $('pausa').onclick = () => BUS.setControl({ pausa: !pausa });
+  $('mascara').onclick = () => BUS.setControl({ mascara: !mascara });
   $('reposo').onchange = () => BUS.setControl({ reposo: Math.max(3, Math.min(60, +$('reposo').value || 10)) });
 
   BUS.onEstado(e => {

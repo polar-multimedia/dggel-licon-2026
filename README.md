@@ -36,13 +36,24 @@ Los ocho patrones están en `assets/tipos.js` y siguen la "Gráfica grupos sangu
   tarjeta de prueba por grupo · **Espacio** pausa/reanuda.
 - Parámetros de URL: `?nombre=Ana&grupo=A%2B` reproduce de inmediato · `?mascara=0` · `?hud=1`.
 
+## Capas de la pantalla (a partir de la foto de la tarjeta)
+
+- `assets/foto/mascara.png` — **máscara virtual**: la foto real de la tarjeta con los interiores de los 8 tubos y la
+  ventana del nombre transparentes. Sirve para previsualizar. Se apaga desde el moderador ("Máscara virtual") o con **M**.
+- `assets/foto/liquidos.png` — lo que asoma por las ventanas: gel de cada tubo (limpio, sin sedimento) estirado 1.5× en
+  ancho y 1.06× en alto para que la máscara física no tenga que atinar, y la zona blanca del nombre con sangrado.
+- `assets/foto/boton.png`, `linea_fina.png`, `linea_gruesa.png`, `arrastre.png` — sedimentos recortados de la foto real
+  (botón negativo en el fondo, línea positiva fina/gruesa sobre el gel, arrastre en el cuello).
+- Coordenadas de trabajo: píxeles de la foto (1448 × 1086); el SVG de la pantalla usa ese viewBox y se centra en 16:9.
+
 ## Máscara física
 
-`assets/mascara_85.svg` es la guía de corte 1:1 en milímetros, generada con la misma geometría
-que dibuja la pantalla (área activa de referencia 1872 × 1053 mm para una 85" 16:9).
+`assets/mascara_85.svg` es la guía de corte 1:1 en milímetros, generada desde la misma foto que dibuja
+la pantalla (área activa de referencia 1872 × 1053 mm para una 85" 16:9): capa de arte = la foto impresa
+(rectángulo azul), capa de corte = 8 interiores de tubo + ventana del nombre (rojo).
 **Confirmar el área activa del modelo de TV antes de cortar**; si difiere, escalar el archivo
 proporcionalmente. La máscara debe extenderse más allá del área activa para cubrir marco y estructura.
-Ventanas: 8 microtubos (embudo + columna), banda de etiquetas y franja de escritura.
+La banda de etiquetas, códigos y pie van impresos en la máscara, no en pantalla.
 
 ## Firebase
 
