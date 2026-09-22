@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>DG Gel · Pantalla</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+  #escena { position: absolute; inset: 0; width: 100%; height: 100%; }
+  svg { width: 100%; height: 100%; display: block; }
+
+  /* Cuerpo blanco de la tarjeta: solo para previsualizar (tecla M). En instalación va apagado. */
+  #cuerpo { transition: opacity .4s; }
+  body.sin-mascara #cuerpo { opacity: 0; }
+
+  .gota { transform-box: fill-box; transform-origin: center; transform: scale(0); opacity: 0;
+          transition: transform .45s cubic-bezier(.2,.9,.3,1.3), opacity .3s; }
+  .gota.on { transform: scale(1); opacity: 1; }
+  .gota.off { transform: scale(.2); opacity: 0; transition: transform .35s ease-in, opacity .3s; }
+
+  .estela { opacity: 0; transition: transform 1.4s cubic-bezier(.5,0,.6,1), opacity .3s; }
+  .estela.on { opacity: .95; }
+  .estela.pos { transition-duration: .9s; }
+
+  .banda, .boton { opacity: 0; transition: opacity .5s; }
+  .banda.on, .boton.on { opacity: 1; }
+
+  @keyframes centrifuga {
+    0%,100% { transform: translate(0,0); }
+    10% { transform: translate(1.2px,-0.8px); } 20% { transform: translate(-1.1px,0.9px); }
+    30% { transform: translate(1px,1px); }      40% { transform: translate(-1.2px,-0.6px); }
+    50% { transform: translate(0.9px,-1.1px); } 60% { transform: translate(-0.8px,1.1px); }
+    70% { transform: translate(1.1px,0.7px); }  80% { transform: translate(-1px,-1px); }
+    90% { transform: translate(0.7px,0.9px); }
+  }
+  #tarjeta.vibra { animation: centrifuga .12s linear infinite; }
+
+  #firma path { fill: none; stroke: #16246b; stroke-linecap: round; stroke-linejoin: round; }
+  #firma path.lleno { fill: #16246b; stroke-width: 0 !important; transition: fill .3s; }
+  #firma text { font-family: 'Homemade Apple', cursive; fill: #16246b; }
+
+  #hud { position: absolute; left: 12px; bottom: 10px; font: 12px/1.4 system-ui, sans-serif; color: #7a7a7a; opacity: 0; transition: opacity .3s; }
+  body.hud #hud { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="escena">
+<svg id="svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gGel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#cfe3ee"/><stop offset=".45" stop-color="#e6f2f8"/><stop offset="1" stop-color="#c9dde9"/>
+    </linearGradient>
+    <linearGradient id="gVidrio" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e9eef2"/><stop offset=".4" stop-color="#ffffff"/><stop offset="1" stop-color="#e2e8ee"/>
+    </linearGradient>
+    <linearGradient id="gLiss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6fafc"/><stop offset="1" stop-color="#eaf2f7"/>
+    </linearGradient>
+    <radialGradient id="gRojo" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#ff5a5a"/><stop offset=".6" stop-color="#d0121f"/><stop offset="1" stop-color="#8e0713"/>
+    </radialGradient>
+    <linearGradient id="gBanda" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e01a28"/><stop offset="1" stop-color="#9c0a15"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#000"/>
+  <!-- Cuerpo de la tarjeta (previsualización de la máscara física) -->
+  <g id="cuerpo">
+    <rect x="60" y="20" width="1800" height="1040" rx="34" fill="#f7f8f9"/>
+    <rect x="60" y="20" width="1800" height="1040" rx="34" fill="none" stroke="#d9dee3" stroke-width="3"/>
+  </g>
+
+  <g id="tarjeta">
+    <g id="tubos"></g>
+    <g id="banda"></g>
+    <g id="franja"></g>
+  </g>
+</svg>
+</div>
+<div id="hud"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../assets/opentype.min.js"></script>
+<script src="../assets/tipos.js"></script>
+<script src="../assets/firebase-config.js"></script>
+<script src="../assets/bus.js"></script>
+<script>
+(function () {
+  const { COLUMNAS, PATRONES, NOMBRES, GRUPOS, GEO } = DGGEL;
+  const NS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+  const el = (tag, attrs, parent) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  const params = new URLSearchParams(location.search);
+
+  // ---------- Construcción de la tarjeta ----------
+  const T = GEO.tubos;
+  const tubos = [];
+  for (let i = 0; i < T.n; i++) {
+    const cx = T.x0 + i * T.paso;
+    const g = el('g', { class: 'tubo' }, $('tubos'));
+    const hw = T.embudoAncho / 2, cw = T.colAncho / 2;
+    // silueta completa (embudo + columna) como fondo de vidrio
+    const silueta = `M${cx-hw},${T.embudoTop} H${cx+hw} L${cx+cw},${T.embudoBase} V${T.colFondo-cw} A${cw},${cw} 0 0 1 ${cx-cw},${T.colFondo-cw} V${T.embudoBase} Z`;
+    el('path', { d: silueta, fill: 'url(#gVidrio)' }, g);
+    // líquido (LISS) sobre el gel
+    el('path', { d: `M${cx-cw},${T.embudoBase+40} H${cx+cw} V${T.gelTop} H${cx-cw} Z`, fill: 'url(#gLiss)' }, g);
+    // gel
+    el('path', { d: `M${cx-cw},${T.gelTop} H${cx+cw} V${T.colFondo-cw} A${cw},${cw} 0 0 1 ${cx-cw},${T.colFondo-cw} Z`, fill: 'url(#gGel)' }, g);
+    // línea de superficie del gel
+    el('line', { x1: cx-cw, y1: T.gelTop, x2: cx+cw, y2: T.gelTop, stroke: '#a9c4d3', 'stroke-width': 1.5 }, g);
+    // brillo de vidrio
+    el('path', { d: `M${cx-cw+7},${T.embudoBase+10} V${T.colFondo-40}`, stroke: '#fff', 'stroke-width': 5, 'stroke-linecap': 'round', opacity: .8 }, g);
+    el('path', { d: `M${cx-hw+16},${T.embudoTop+14} L${cx-cw+9},${T.embudoBase-8}`, stroke: '#fff', 'stroke-width': 6, 'stroke-linecap': 'round', opacity: .7 }, g);
+    // contorno
+    el('path', { d: silueta, fill: 'none', stroke: '#b9c3cb', 'stroke-width': 2.5 }, g);
+
+    // elementos animados
+    const gota = el('circle', { class: 'gota', cx, cy: T.embudoTop + 95, r: 30, fill: 'url(#gRojo)' }, g);
+    const estela = el('rect', { class: 'estela', x: cx - 15, y: T.embudoBase - 10, width: 30, height: 70, rx: 12, fill: 'url(#gBanda)' }, g);
+    const banda = el('rect', { class: 'banda', x: cx - cw + 2, y: T.gelTop + 2, width: T.colAncho - 4, height: 20, rx: 5, fill: 'url(#gBanda)' }, g);
+    const boton = el('ellipse', { class: 'boton', cx, cy: T.colFondo - 24, rx: cw - 5, ry: 12, fill: 'url(#gBanda)' }, g);
+    tubos.push({ cx, gota, estela, banda, boton });
+  }
+
+  // Banda de etiquetas
+  const B = GEO.banda, cellW = B.w / T.n;
+  COLUMNAS.forEach((c, i) => {
+    const x = B.x + i * cellW;
+    el('rect', { x, y: B.y, width: cellW, height: B.h, fill: c.color, stroke: '#2b2f33', 'stroke-width': 2 }, $('banda'));
+    const t = el('text', { x: x + cellW / 2, y: B.y + B.h / 2 + 12, 'text-anchor': 'middle', 'font-family': 'Arial Narrow, Arial, sans-serif', 'font-weight': 700, 'font-size': 34, fill: c.texto }, $('banda'));
+    t.textContent = c.label;
+  });
+
+  // Franja de escritura
+  const F = GEO.franja;
+  el('rect', { x: F.x, y: F.y, width: F.w, height: F.h, rx: F.r, fill: '#ffffff', stroke: '#cfd6dc', 'stroke-width': 2 }, $('franja'));
+  el('line', { x1: F.x + 40, y1: F.y + 150, x2: F.x + F.w - 40, y2: F.y + 150, stroke: '#c9d6e6', 'stroke-width': 2, 'stroke-dasharray': '2 6' }, $('franja'));
+  const rot = el('text', { x: F.x + 40, y: F.y + 32, 'font-family': 'Arial, sans-serif', 'font-size': 18, fill: '#8a949c', 'letter-spacing': 1 }, $('franja'));
+  rot.textContent = 'ABO / Rh · GRUPO SANGUÍNEO · NOMBRE';
+  const lote = el('text', { x: F.x + F.w - 40, y: F.y + F.h - 22, 'text-anchor': 'end', 'font-family': 'Arial, sans-serif', 'font-size': 16, fill: '#aab3ba' }, $('franja'));
+  lote.textContent = 'AMMTAC 2026 · LICON';
+  const firma = el('g', { id: 'firma' }, $('franja'));
+
+  // ---------- Escritura a mano (opentype.js) ----------
+  let fuente = null;
+  opentype.load('../assets/fonts/HomemadeApple.ttf', (err, f) => { if (!err) fuente = f; else console.warn('fuente', err); });
+
+  function limpiarFirma() { while (firma.firstChild) firma.removeChild(firma.firstChild); }
+
+  // Escribe texto trazo por trazo. Devuelve promesa que resuelve al terminar.
+  async function escribir(texto, x, y, size, maxW, velocidad = 1) {
+    if (!fuente) { // respaldo sin opentype: texto plano con la fuente vía CSS
+      const t = el('text', { x, y, 'font-size': size }, firma); t.textContent = texto; return;
+    }
+    let ancho = fuente.getAdvanceWidth(texto, size);
+    if (ancho > maxW) { size = size * maxW / ancho; }
+    const paths = fuente.getPaths(texto, x, y, size);
+    const grosor = Math.max(3, size * 0.05);
+    const trazos = [];
+    for (const p of paths) {
+      const d = p.toPathData(2);
+      if (!d) continue;
+      const n = el('path', { d, 'stroke-width': grosor }, firma);
+      const L = n.getTotalLength();
+      n.style.strokeDasharray = L + ' ' + L;
+      n.style.strokeDashoffset = L;
+      trazos.push({ n, L });
+    }
+    for (const { n, L } of trazos) {
+      const dur = Math.min(900, Math.max(120, L / (1.6 * velocidad))); // ms
+      n.style.transition = `stroke-dashoffset ${dur}ms linear`;
+      // forzar reflow
+      n.getBoundingClientRect();
+      n.style.strokeDashoffset = 0;
+      await espera(dur * 0.85);
+      n.classList.add('lleno');
+    }
+  }
+
+  // ---------- Animación de un registro ----------
+  function reset() {
+    $('tarjeta').classList.remove('vibra');
+    tubos.forEach(t => {
+      t.gota.classList.remove('on', 'off');
+      t.estela.classList.remove('on', 'pos');
+      t.estela.style.transform = '';
+      t.banda.classList.remove('on');
+      t.boton.classList.remove('on');
+    });
+    limpiarFirma();
+  }
+
+  async function reproducir(reg) {
+    const patron = PATRONES[reg.grupo] || PATRONES['O+'];
+    reset();
+    await espera(300);
+    // 1. muestra en cada pocillo
+    tubos.forEach((t, i) => setTimeout(() => t.gota.classList.add('on'), i * 90));
+    await espera(1300);
+    // 2. centrifugado
+    $('tarjeta').classList.add('vibra');
+    await espera(500);
+    tubos.forEach((t, i) => setTimeout(() => {
+      t.gota.classList.add('off');
+      const pos = patron[i];
+      const destino = pos ? (T.gelTop - (T.embudoBase - 10)) : (T.colFondo - 60 - (T.embudoBase - 10));
+      t.estela.classList.add('on'); if (pos) t.estela.classList.add('pos');
+      t.estela.getBoundingClientRect();
+      t.estela.style.transform = `translateY(${destino}px)`;
+    }, 200 + i * 70));
+    await espera(2100);
+    tubos.forEach((t, i) => setTimeout(() => {
+      (patron[i] ? t.banda : t.boton).classList.add('on');
+      t.estela.classList.remove('on');
+    }, i * 50));
+    await espera(700);
+    $('tarjeta').classList.remove('vibra');
+    // 3. nombre manuscrito y grupo
+    await espera(300);
+    await escribir(reg.nombre, F.x + 60, F.y + 135, 120, F.w - 620, 1);
+    await espera(250);
+    await escribir(NOMBRES[reg.grupo] || reg.grupo, F.x + F.w - 520, F.y + 135, 64, 470, 1.4);
+  }
+
+  async function idle() {
+    reset();
+    await espera(200);
+    tubos.forEach((t, i) => setTimeout(() => t.gota.classList.add('on'), i * 120));
+    await espera(900);
+    await escribir('Escanea el código y escribe tu historia', F.x + 60, F.y + 135, 78, F.w - 120, 1.3);
+  }
+
+  // ---------- Cola y control ----------
+  const cola = [];
+  let ocupado = false, pausa = false, reposo = 10, enIdle = false, ultimoReproducir = null;
+
+  function publicar(mostrando) {
+    BUS.setEstado({ enCola: cola.length, mostrando: mostrando ? { nombre: mostrando.nombre, grupo: mostrando.grupo } : null }).catch(() => {});
+    $('hud').textContent = `${BUS.DEMO ? 'DEMO · ' : ''}cola: ${cola.length} · reposo: ${reposo}s${pausa ? ' · PAUSA' : ''}`;
+  }
+
+  async function bucle() {
+    if (ocupado) return;
+    ocupado = true;
+    do {
+      while (cola.length && !pausa) {
+        const reg = cola.shift();
+        enIdle = false;
+        publicar(reg);
+        await reproducir(reg);
+        await espera(reposo * 1000);
+      }
+      publicar(null);
+      if (!enIdle) { enIdle = true; await idle(); }
+    } while (cola.length && !pausa); // llegó algo mientras se escribía el modo espera
+    ocupado = false;
+  }
+
+  function encolar(reg, alFrente) {
+    if (!reg || !reg.nombre) return;
+    reg.nombre = String(reg.nombre).trim().slice(0, 28);
+    if (!PATRONES[reg.grupo]) reg.grupo = 'O+';
+    alFrente ? cola.unshift(reg) : cola.push(reg);
+    publicar(null);
+    bucle();
+  }
+
+  BUS.onRegistro(r => encolar(r));
+  BUS.onControl(c => {
+    if (!c) return;
+    if (typeof c.reposo === 'number') reposo = Math.max(3, Math.min(60, c.reposo));
+    const p = !!c.pausa; if (p !== pausa) { pausa = p; if (!pausa) bucle(); }
+    if (c.reproducir && c.reproducir.id && c.reproducir.id !== ultimoReproducir) {
+      ultimoReproducir = c.reproducir.id;
+      encolar({ nombre: c.reproducir.nombre, grupo: c.reproducir.grupo }, true);
+    }
+    if (c.borrado) { cola.length = 0; publicar(null); }
+    publicar(null);
+  });
+
+  // ---------- Teclas de prueba ----------
+  const nombresDemo = ['Roberto Carpinteyro', 'Leticia Contreras', 'Diego Rivera', 'Ana Sofía Martínez', 'Jorge Luis', 'María Fernanda', 'Armando', 'Arturo'];
+  document.addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (k >= '1' && k <= '8') { const i = +k - 1; encolar({ nombre: nombresDemo[i], grupo: GRUPOS[i] }); }
+    if (k === 'm') document.body.classList.toggle('sin-mascara');
+    if (k === 'h') document.body.classList.toggle('hud');
+    if (k === 'f') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+    if (k === ' ') { pausa = !pausa; if (!pausa) bucle(); publicar(null); }
+  });
+
+  if (params.get('mascara') === '0') document.body.classList.add('sin-mascara');
+  if (params.get('hud') === '1') document.body.classList.add('hud');
+
+  // Arranque
+  window.addEventListener('load', async () => {
+    await espera(600); // deja cargar la fuente
+    if (params.get('nombre')) encolar({ nombre: params.get('nombre'), grupo: params.get('grupo') || 'O+' });
+    else bucle();
+  });
+})();
+</script>
+</body>
+</html>

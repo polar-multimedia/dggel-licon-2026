@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>DG Gel · Moderador</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #14171a; color: #e8ecef; font: 15px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  h1 { grid-column: 1/-1; font-size: 20px; margin: 0 0 4px; }
+  .card { background: #1e2327; border: 1px solid #2c3339; border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #9aa5ad; margin: 0 0 12px; }
+  .estado { font-size: 22px; font-weight: 700; }
+  .estado small { display: block; font-size: 13px; color: #9aa5ad; font-weight: 400; }
+  button { background: #2b3238; color: #e8ecef; border: 1px solid #3a434a; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; margin: 4px 4px 4px 0; }
+  button.rojo { background: #8e1119; border-color: #b0161f; }
+  button.verde { background: #0f6b3a; border-color: #159350; }
+  input, select { background: #14171a; color: #fff; border: 1px solid #3a434a; border-radius: 8px; padding: 9px 10px; font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 7px 6px; border-bottom: 1px solid #2c3339; }
+  th { color: #9aa5ad; font-weight: 600; }
+  td button { padding: 4px 9px; margin: 0; font-size: 13px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .demo { color: #ffd166; font-size: 12px; }
+  .peligro { margin-top: 10px; display: none; }
+  .peligro.on { display: block; }
+  a { color: #7cc4ff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tarjeta DG Gel · Moderador <span class="demo" id="demo"></span></h1>
+
+  <div class="card">
+    <h2>Pantalla</h2>
+    <div class="estado" id="mostrando">—<small>en pantalla</small></div>
+    <div class="estado" style="margin-top:10px" id="cola">0<small>en cola</small></div>
+    <div style="margin-top:14px">
+      <button id="pausa" class="verde">Pausar cola</button>
+      <label>Reposo tras cada tarjeta <input id="reposo" type="number" min="3" max="60" value="10" style="width:70px"> s</label>
+    </div>
+    <p style="font-size:13px;color:#9aa5ad;margin-top:12px">Vistas: <a href="../pantalla/" target="_blank">pantalla</a> · <a href="../registro/" target="_blank">registro</a>. En la pantalla: <b>F</b> pantalla completa, <b>M</b> ocultar cuerpo blanco (instalación real), <b>H</b> datos, <b>1–8</b> prueba.</p>
+  </div>
+
+  <div class="card">
+    <h2>Enviar a mano</h2>
+    <div class="row">
+      <input id="nombre" type="text" maxlength="28" placeholder="Nombre" style="flex:1">
+      <select id="grupo"></select>
+      <button id="enviar" class="verde">Mostrar ahora</button>
+    </div>
+    <p style="font-size:13px;color:#9aa5ad">Se pone al frente de la cola (útil para invitados o directivos).</p>
+    <h2 style="margin-top:18px">Mantenimiento</h2>
+    <button id="borrar" class="rojo">Borrar todos los registros…</button>
+    <div class="peligro" id="peligro">¿Seguro? Esto vacía la base del evento. <button id="borrarSi" class="rojo">Sí, borrar</button> <button id="borrarNo">Cancelar</button></div>
+  </div>
+
+  <div class="card" style="grid-column:1/-1">
+    <h2>Últimos registros</h2>
+    <table><thead><tr><th>Hora</th><th>Nombre</th><th>Grupo</th><th></th></tr></thead><tbody id="lista"></tbody></table>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../assets/tipos.js"></script>
+<script src="../assets/firebase-config.js"></script>
+<script src="../assets/bus.js"></script>
+<script>
+(function () {
+  const { GRUPOS, NOMBRES } = DGGEL;
+  const $ = id => document.getElementById(id);
+  if (BUS.DEMO) $('demo').textContent = 'MODO DEMO (sin Firebase)';
+  GRUPOS.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = NOMBRES[g]; $('grupo').appendChild(o); });
+
+  let pausa = false;
+  BUS.onControl(c => {
+    pausa = !!c.pausa;
+    $('pausa').textContent = pausa ? 'Reanudar cola' : 'Pausar cola';
+    $('pausa').className = pausa ? 'rojo' : 'verde';
+    if (typeof c.reposo === 'number' && document.activeElement !== $('reposo')) $('reposo').value = c.reposo;
+  });
+  $('pausa').onclick = () => BUS.setControl({ pausa: !pausa });
+  $('reposo').onchange = () => BUS.setControl({ reposo: Math.max(3, Math.min(60, +$('reposo').value || 10)) });
+
+  BUS.onEstado(e => {
+    const m = e && e.mostrando;
+    $('mostrando').innerHTML = (m ? `${m.nombre} · ${NOMBRES[m.grupo] || m.grupo}` : 'En espera') + '<small>en pantalla</small>';
+    $('cola').innerHTML = (e && e.enCola || 0) + '<small>en cola</small>';
+  });
+
+  function reproducir(nombre, grupo) {
+    return BUS.setControl({ reproducir: { id: Date.now().toString(36), nombre, grupo, ts: Date.now() } });
+  }
+  $('enviar').onclick = () => { const n = $('nombre').value.trim(); if (n.length < 2) return; reproducir(n, $('grupo').value); $('nombre').value = ''; };
+
+  BUS.recientes(arr => {
+    $('lista').innerHTML = arr.map(r => {
+      const h = new Date(r.ts || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+      return `<tr><td>${h}</td><td>${(r.nombre || '').replace(/[<>&]/g, '')}</td><td>${NOMBRES[r.grupo] || r.grupo}</td><td><button data-n="${encodeURIComponent(r.nombre)}" data-g="${r.grupo}">Repetir</button></td></tr>`;
+    }).join('');
+  }, 40);
+  $('lista').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    reproducir(decodeURIComponent(b.dataset.n), b.dataset.g);
+  });
+
+  $('borrar').onclick = () => $('peligro').classList.add('on');
+  $('borrarNo').onclick = () => $('peligro').classList.remove('on');
+  $('borrarSi').onclick = () => { BUS.borrarTodo(); $('peligro').classList.remove('on'); if (BUS.DEMO) BUS.recientes(a => {}, 1), location.reload(); };
+})();
+</script>
+</body>
+</html>

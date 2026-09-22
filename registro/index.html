@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Tu tarjeta DG Gel · LICON</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0b3d91">
+<style>
+  @font-face { font-family: 'Homemade Apple'; src: url('../assets/fonts/HomemadeApple.ttf') format('truetype'); font-display: swap; }
+  :root { --azul: #0b3d91; --rojo: #d0121f; --gris: #f2f4f6; --ink: #16246b; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fff; color: #1c1f23; font: 16px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 460px; margin: 0 auto; padding: 24px 20px 40px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .logo { font-weight: 800; letter-spacing: -.5px; font-size: 22px; color: var(--azul); }
+  .logo b { color: var(--rojo); }
+  h1 { font-size: 24px; line-height: 1.2; margin: 6px 0 6px; }
+  p.sub { margin: 0 0 22px; color: #5a636b; }
+  label { display: block; font-weight: 600; margin: 18px 0 8px; }
+  input[type=text] { width: 100%; font-size: 20px; padding: 14px 16px; border: 2px solid #cfd6dc; border-radius: 12px; outline: none; font-family: inherit; }
+  input[type=text]:focus { border-color: var(--azul); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .g { border: 2px solid #cfd6dc; border-radius: 12px; padding: 14px 0; text-align: center; font-weight: 700; font-size: 20px; background: #fff; cursor: pointer; user-select: none; transition: .15s; }
+  .g small { display: block; font-weight: 500; font-size: 12px; color: #6a737b; }
+  .g.sel { border-color: var(--rojo); background: #fff1f2; color: var(--rojo); }
+  .ayuda { font-size: 13px; color: #6a737b; margin-top: 10px; }
+  button.env { width: 100%; margin-top: 26px; padding: 16px; font-size: 18px; font-weight: 700; color: #fff; background: var(--rojo); border: 0; border-radius: 14px; cursor: pointer; }
+  button.env:disabled { background: #c9ced3; }
+  .ok { display: none; text-align: center; padding-top: 30px; }
+  .ok.on { display: block; }
+  .tarjeta { margin: 22px auto 0; width: 100%; max-width: 380px; }
+  .estado { margin-top: 18px; padding: 14px; background: var(--gris); border-radius: 12px; font-size: 15px; }
+  .estado b { color: var(--azul); }
+  .otra { margin-top: 24px; background: none; border: 2px solid #cfd6dc; color: #333; padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+  .demo { position: fixed; top: 8px; right: 8px; font-size: 11px; background: #ffe58a; padding: 3px 8px; border-radius: 6px; display: none; }
+  .aviso { font-size: 12px; color: #8a949c; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="demo" id="demo">MODO DEMO</div>
+<div class="wrap">
+  <header><div class="logo">LIC<b>O</b>N</div></header>
+
+  <section id="form">
+    <h1>Una historia detrás de cada gota</h1>
+    <p class="sub">Escribe tu nombre y tu grupo sanguíneo. En unos segundos la tarjeta DG Gel gigante del stand se ordenará con tu resultado y tu nombre.</p>
+
+    <label for="nombre">Tu nombre</label>
+    <input id="nombre" type="text" maxlength="28" placeholder="Como quieres que aparezca" autocomplete="name">
+
+    <label>Tu grupo sanguíneo</label>
+    <div class="grid" id="grid"></div>
+    <div class="ayuda">¿No lo conoces? En México el más frecuente es O positivo.</div>
+
+    <button class="env" id="enviar" disabled>Ver mi tarjeta en la pantalla</button>
+    <div class="aviso">Solo usamos tu nombre para mostrarlo en la pantalla del stand durante el congreso.</div>
+  </section>
+
+  <section class="ok" id="ok">
+    <h1 id="okTitulo">¡Listo!</h1>
+    <p class="sub" id="okTexto">Mira la tarjeta gigante del stand.</p>
+    <svg class="tarjeta" viewBox="0 0 380 210" xmlns="http://www.w3.org/2000/svg" id="mini"></svg>
+    <div class="estado" id="estado">Preparando tu tarjeta…</div>
+    <button class="otra" id="otra">Registrar a otra persona</button>
+  </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../assets/tipos.js"></script>
+<script src="../assets/firebase-config.js"></script>
+<script src="../assets/bus.js"></script>
+<script>
+(function () {
+  const { COLUMNAS, PATRONES, NOMBRES, GRUPOS } = DGGEL;
+  const $ = id => document.getElementById(id);
+  if (BUS.DEMO) $('demo').style.display = 'block';
+
+  let grupo = null;
+  GRUPOS.forEach(g => {
+    const d = document.createElement('div');
+    d.className = 'g'; d.dataset.g = g;
+    d.innerHTML = `${g.replace(/[+-]$/, '')}<small>${g.endsWith('+') ? 'positivo' : 'negativo'}</small>`;
+    d.onclick = () => { document.querySelectorAll('.g').forEach(x => x.classList.remove('sel')); d.classList.add('sel'); grupo = g; valida(); };
+    $('grid').appendChild(d);
+  });
+
+  function valida() { $('enviar').disabled = !(grupo && $('nombre').value.trim().length >= 2); }
+  $('nombre').addEventListener('input', valida);
+
+  // Mini tarjeta de confirmación
+  function mini(g, nombre) {
+    const svg = $('mini'); svg.innerHTML = '';
+    const p = PATRONES[g];
+    svg.innerHTML += `<rect x="2" y="2" width="376" height="206" rx="12" fill="#f7f8f9" stroke="#d9dee3"/>`;
+    COLUMNAS.forEach((c, i) => {
+      const cx = 40 + i * 43;
+      svg.innerHTML += `<path d="M${cx-14},18 H${cx+14} L${cx+6},60 V115 A6,6 0 0 1 ${cx-6},115 V60 Z" fill="#fff" stroke="#b9c3cb" stroke-width="1.2"/>`;
+      svg.innerHTML += `<path d="M${cx-6},85 H${cx+6} V115 A6,6 0 0 1 ${cx-6},115 Z" fill="#dbe9f1"/>`;
+      svg.innerHTML += p[i] ? `<rect x="${cx-5}" y="86" width="10" height="5" rx="1.5" fill="#c8102e"/>` : `<ellipse cx="${cx}" cy="113" rx="4.5" ry="3" fill="#c8102e"/>`;
+      svg.innerHTML += `<rect x="${cx-21}" y="128" width="43" height="20" fill="${c.color}" stroke="#2b2f33" stroke-width=".8"/><text x="${cx}" y="142" text-anchor="middle" font-size="10" font-weight="700" font-family="Arial" fill="${c.texto}">${c.label}</text>`;
+    });
+    svg.innerHTML += `<rect x="20" y="158" width="340" height="40" rx="6" fill="#fff" stroke="#cfd6dc"/><text x="30" y="185" font-size="18" font-family="'Homemade Apple', 'Bradley Hand', 'Segoe Script', cursive" fill="#16246b">${nombre.replace(/[<>&]/g, '')}</text>`;
+  }
+
+  let miId = null, enviadoTs = 0;
+  $('enviar').onclick = async () => {
+    const nombre = $('nombre').value.trim().slice(0, 28);
+    if (!nombre || !grupo) return;
+    // Anti-doble envío: 90 s por dispositivo
+    const ultimo = +localStorage.getItem('dggel.ultimo') || 0;
+    if (Date.now() - ultimo < 90000 && !BUS.DEMO) { $('estado').textContent = 'Espera un momento antes de registrar a otra persona.'; }
+    $('enviar').disabled = true; $('enviar').textContent = 'Enviando…';
+    try {
+      miId = await BUS.enviarRegistro({ nombre, grupo });
+      enviadoTs = Date.now();
+      localStorage.setItem('dggel.ultimo', String(enviadoTs));
+      $('okTitulo').textContent = `¡Listo, ${nombre.split(' ')[0]}!`;
+      $('okTexto').textContent = `Tu tarjeta ${NOMBRES[grupo]} está en camino a la pantalla del stand.`;
+      mini(grupo, nombre);
+      $('form').style.display = 'none'; $('ok').classList.add('on');
+      window.scrollTo(0, 0);
+    } catch (e) {
+      $('enviar').disabled = false; $('enviar').textContent = 'Reintentar';
+      console.error(e);
+      $('estado').textContent = 'No se pudo enviar. Revisa tu conexión.';
+    }
+  };
+
+  BUS.onEstado(e => {
+    if (!miId) return;
+    const m = e && e.mostrando;
+    if (m && m.nombre === $('nombre').value.trim().slice(0, 28) && m.grupo === grupo) {
+      $('estado').innerHTML = '<b>¡Es tu turno!</b> Mira la tarjeta gigante ahora.';
+    } else if (e && typeof e.enCola === 'number') {
+      $('estado').innerHTML = e.enCola > 0 ? `Hay <b>${e.enCola}</b> tarjeta${e.enCola === 1 ? '' : 's'} antes que la tuya. Cada una toma unos 20 segundos.` : 'Tu tarjeta se mostrará en unos segundos…';
+    }
+  });
+
+  $('otra').onclick = () => { $('ok').classList.remove('on'); $('form').style.display = ''; $('nombre').value = ''; grupo = null; miId = null; document.querySelectorAll('.g').forEach(x => x.classList.remove('sel')); $('enviar').textContent = 'Ver mi tarjeta en la pantalla'; valida(); };
+})();
+</script>
+</body>
+</html>
