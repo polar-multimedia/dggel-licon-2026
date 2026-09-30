@@ -3,66 +3,201 @@
 <head>
 <meta charset="utf-8">
 <title>DG Gel · Moderador</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #14171a; color: #e8ecef; font: 15px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  h1 { grid-column: 1/-1; font-size: 20px; margin: 0 0 4px; }
-  .card { background: #1e2327; border: 1px solid #2c3339; border-radius: 12px; padding: 16px; }
-  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #9aa5ad; margin: 0 0 12px; }
-  .estado { font-size: 22px; font-weight: 700; }
-  .estado small { display: block; font-size: 13px; color: #9aa5ad; font-weight: 400; }
-  button { background: #2b3238; color: #e8ecef; border: 1px solid #3a434a; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; margin: 4px 4px 4px 0; }
-  button.rojo { background: #8e1119; border-color: #b0161f; }
-  button.verde { background: #0f6b3a; border-color: #159350; }
-  input, select { background: #14171a; color: #fff; border: 1px solid #3a434a; border-radius: 8px; padding: 9px 10px; font-size: 15px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  td, th { text-align: left; padding: 7px 6px; border-bottom: 1px solid #2c3339; }
-  th { color: #9aa5ad; font-weight: 600; }
-  td button { padding: 4px 9px; margin: 0; font-size: 13px; }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .demo { color: #ffd166; font-size: 12px; }
-  .peligro { margin-top: 10px; display: none; }
-  .peligro.on { display: block; }
-  a { color: #7cc4ff; }
+  :root {
+    --bg: #000; --card: #121416; --card2: #1a1d20; --line: #2a2e33;
+    --txt: #fff; --txt2: #a9b1b8; --txt3: #6f787f;
+    --rojo: #d0121f; --rojo2: #ff3b47; --verde: #1fae5b; --ambar: #f0b429;
+    --r: 16px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--txt); }
+  body { font: 16px/1.4 -apple-system, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         padding: env(safe-area-inset-top) 0 calc(76px + env(safe-area-inset-bottom)); }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--rojo2); outline-offset: 2px; }
+
+  /* Encabezado */
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; }
+  header img { height: 26px; display: block; }
+  .conexion { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--txt2); font-weight: 600; }
+  .conexion i { width: 9px; height: 9px; border-radius: 50%; background: var(--txt3); }
+  .conexion.on i { background: var(--verde); box-shadow: 0 0 0 3px rgba(31,174,91,.2); }
+  .conexion.off i { background: var(--rojo2); }
+
+  /* Tarjeta "en pantalla" */
+  .live { position: sticky; top: env(safe-area-inset-top); z-index: 5; background: var(--bg); padding-bottom: 10px; }
+  .ahora { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; padding: 4px 9px; border-radius: 99px; background: var(--card2); color: var(--txt2); }
+  .chip.vivo { background: rgba(208,18,31,.18); color: var(--rojo2); }
+  .chip.vivo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--rojo2); animation: late 1.2s infinite; }
+  .chip.pausa { background: rgba(240,180,41,.16); color: var(--ambar); }
+  @keyframes late { 50% { opacity: .25; } }
+  .ahora .nombre { grid-column: 1 / -1; font-size: 21px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+  .ahora .grupo { color: var(--txt2); font-size: 15px; font-weight: 600; }
+  .cola { text-align: right; }
+  .cola b { display: block; font-size: 28px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .cola span { font-size: 12px; color: var(--txt2); font-weight: 600; }
+  svg.patron { width: 132px; height: 34px; display: block; }
+
+  /* Controles principales */
+  .controles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .btn { border: 0; border-radius: 14px; padding: 12px; font-size: 17px; font-weight: 800; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--card2); color: var(--txt); border: 1px solid var(--line); }
+  .btn:active { transform: scale(.98); }
+  .btn.rojo { background: var(--rojo); border-color: var(--rojo); }
+  .btn.ambar { background: var(--ambar); border-color: var(--ambar); color: #1a1200; }
+  .btn.ancho { grid-column: 1 / -1; }
+  .btn svg { width: 20px; height: 20px; }
+
+  /* Secciones / pestañas */
+  section[hidden] { display: none !important; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--txt2); margin: 20px 0 10px; font-weight: 800; }
+  .buscar { width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 12px; color: var(--txt); padding: 13px 14px; font-size: 16px; }
+  .buscar::placeholder { color: var(--txt3); }
+  .lista { display: grid; gap: 8px; margin-top: 10px; }
+  .reg { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+  .reg .n { font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+  .reg .m { font-size: 13px; color: var(--txt2); display: flex; gap: 8px; align-items: center; }
+  .g { display: inline-block; min-width: 38px; text-align: center; padding: 2px 7px; border-radius: 8px; background: var(--card2); color: var(--txt); font-weight: 800; font-size: 13px; }
+  .reg button { grid-row: 1 / span 2; grid-column: 2; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-weight: 700; font-size: 14px; }
+  .reg button:active { background: var(--rojo); border-color: var(--rojo); }
+  .vacio { color: var(--txt3); text-align: center; padding: 28px 0; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--txt2); font-weight: 700; }
+  .total { display: flex; justify-content: space-between; align-items: baseline; }
+  .total b { font-size: 15px; }
+
+  /* Enviar a mano */
+  label.campo { display: block; font-weight: 700; margin: 16px 0 8px; }
+  input.nombre { width: 100%; background: var(--card); border: 2px solid var(--line); border-radius: 14px; color: var(--txt); padding: 15px 16px; font-size: 20px; }
+  input.nombre:focus { border-color: var(--rojo); outline: none; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .gbtn { background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 12px 0; font-weight: 800; font-size: 20px; }
+  .gbtn small { display: block; font-weight: 600; font-size: 11px; color: var(--txt2); }
+  .gbtn[aria-pressed="true"] { background: var(--rojo); border-color: var(--rojo2); }
+  .gbtn[aria-pressed="true"] small { color: #ffd6d9; }
+  .nota { font-size: 13px; color: var(--txt2); margin: 10px 0 0; }
+
+  /* Ajustes */
+  .fila { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .fila .t { font-weight: 700; }
+  .fila .d { font-size: 13px; color: var(--txt2); }
+  .switch { position: relative; width: 56px; height: 32px; border-radius: 99px; background: var(--line); border: 0; flex: none; transition: background .2s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: transform .2s; }
+  .switch[aria-checked="true"] { background: var(--verde); }
+  .switch[aria-checked="true"]::after { transform: translateX(24px); }
+  .stepper { display: flex; align-items: center; gap: 6px; flex: none; }
+  .stepper button { width: 42px; height: 42px; border-radius: 12px; background: var(--card2); border: 1px solid var(--line); font-size: 22px; font-weight: 700; }
+  .stepper b { min-width: 52px; text-align: center; font-size: 18px; font-variant-numeric: tabular-nums; }
+  a.fila { color: inherit; text-decoration: none; }
+  a.fila::after { content: "›"; font-size: 24px; color: var(--txt3); }
+  .peligro { border-color: rgba(208,18,31,.5); }
+  .confirmar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
+  /* Barra inferior */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(12,13,15,.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
+  nav .in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); }
+  nav button { background: none; border: 0; padding: 8px 0; display: grid; justify-items: center; gap: 3px; font-size: 12px; font-weight: 700; color: var(--txt3); }
+  nav button svg { width: 24px; height: 24px; }
+  nav button[aria-selected="true"] { color: var(--txt); }
+  nav button[aria-selected="true"] svg { color: var(--rojo2); }
+
+  .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); background: #fff; color: #000; font-weight: 700; padding: 12px 18px; border-radius: 99px; opacity: 0; transition: .25s; pointer-events: none; z-index: 20; white-space: nowrap; }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .demo { background: #ffe58a; color: #3b2d00; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Tarjeta DG Gel · Moderador <span class="demo" id="demo"></span></h1>
+  <header>
+    <img src="../assets/licon_logo.png" alt="LICON">
+    <div class="row" style="display:flex;gap:8px;align-items:center">
+      <span class="demo" id="demo" hidden>DEMO</span>
+      <div class="conexion" id="conexion"><i></i><span>Conectando…</span></div>
+    </div>
+  </header>
 
-  <div class="card">
+  <!-- En pantalla + controles (siempre visibles) -->
+  <div class="live">
+    <div class="ahora">
+      <div><span class="chip" id="chipEstado">En espera</span></div>
+      <div class="cola"><b id="cola">0</b><span>en cola</span></div>
+      <div class="nombre" id="ahoraNombre">Nadie en pantalla</div>
+      <div class="grupo" id="ahoraGrupo">Modo de espera</div>
+      <svg class="patron" id="patron" viewBox="0 0 132 34" aria-hidden="true"></svg>
+    </div>
+    <div class="controles">
+      <button class="btn" id="pausa"></button>
+      <button class="btn" id="mascaraBtn"></button>
+    </div>
+  </div>
+
+  <!-- Registros -->
+  <section id="tabRegistros">
+    <h2>Registros</h2>
+    <input class="buscar" id="buscar" type="search" placeholder="Buscar por nombre" autocomplete="off">
+    <div class="lista" id="lista"></div>
+    <h2>Grupos del congreso</h2>
+    <div class="total"><span class="nota" style="margin:0">Total de tarjetas registradas</span><b id="total">0</b></div>
+    <div class="stats" id="stats" style="margin-top:10px"></div>
+  </section>
+
+  <!-- Enviar a mano -->
+  <section id="tabEnviar" hidden>
+    <h2>Enviar a la pantalla</h2>
+    <p class="nota" style="margin-top:0">Para invitados especiales o directivos. Se muestra en cuanto termine la tarjeta actual.</p>
+    <label class="campo" for="nombre">Nombre</label>
+    <input class="nombre" id="nombre" type="text" maxlength="28" placeholder="Como debe aparecer" autocomplete="off" autocapitalize="words">
+    <label class="campo">Grupo sanguíneo</label>
+    <div class="grid" id="gridGrupos"></div>
+    <div class="controles" style="margin-top:18px"><button class="btn rojo ancho" id="enviar" disabled>Mostrar ahora</button></div>
+  </section>
+
+  <!-- Ajustes -->
+  <section id="tabAjustes" hidden>
     <h2>Pantalla</h2>
-    <div class="estado" id="mostrando">—<small>en pantalla</small></div>
-    <div class="estado" style="margin-top:10px" id="cola">0<small>en cola</small></div>
-    <div style="margin-top:14px">
-      <button id="pausa" class="verde">Pausar cola</button>
-      <button id="mascara">Máscara virtual: —</button>
-      <label>Reposo tras cada tarjeta <input id="reposo" type="number" min="3" max="60" value="10" style="width:70px"> s</label>
+    <div class="fila">
+      <div><div class="t">Máscara virtual</div><div class="d">Apágala cuando la tarjeta física ya esté montada</div></div>
+      <button class="switch" id="mascaraSw" role="switch" aria-checked="true" aria-label="Máscara virtual"></button>
     </div>
-    <p style="font-size:13px;color:#9aa5ad;margin-top:8px"><b>Máscara virtual</b> = la foto de la tarjeta dibujada en pantalla (para previsualizar). Con la máscara física montada, apágala: la pantalla muestra solo gel, sedimentos y la ventana del nombre, con sangrado para que la máscara real no tenga que atinar.</p>
-    <p style="font-size:13px;color:#9aa5ad;margin-top:12px">Vistas: <a href="../pantalla/" target="_blank">pantalla</a> · <a href="../registro/" target="_blank">registro</a>. En la pantalla: <b>F</b> pantalla completa, <b>M</b> máscara virtual on/off (solo local), <b>H</b> datos, <b>1–8</b> prueba.</p>
-  </div>
-
-  <div class="card">
-    <h2>Enviar a mano</h2>
-    <div class="row">
-      <input id="nombre" type="text" maxlength="28" placeholder="Nombre" style="flex:1">
-      <select id="grupo"></select>
-      <button id="enviar" class="verde">Mostrar ahora</button>
+    <div class="fila">
+      <div><div class="t">Pausa entre tarjetas</div><div class="d">Tiempo que la tarjeta terminada se queda en pantalla</div></div>
+      <div class="stepper"><button id="menos" aria-label="Menos tiempo">−</button><b id="reposo">10 s</b><button id="mas" aria-label="Más tiempo">+</button></div>
     </div>
-    <p style="font-size:13px;color:#9aa5ad">Se pone al frente de la cola (útil para invitados o directivos).</p>
-    <h2 style="margin-top:18px">Mantenimiento</h2>
-    <button id="borrar" class="rojo">Borrar todos los registros…</button>
-    <div class="peligro" id="peligro">¿Seguro? Esto vacía la base del evento. <button id="borrarSi" class="rojo">Sí, borrar</button> <button id="borrarNo">Cancelar</button></div>
-  </div>
-
-  <div class="card" style="grid-column:1/-1">
-    <h2>Últimos registros</h2>
-    <table><thead><tr><th>Hora</th><th>Nombre</th><th>Grupo</th><th></th></tr></thead><tbody id="lista"></tbody></table>
-  </div>
+    <h2>Vistas</h2>
+    <a class="fila" href="../pantalla/" target="_blank"><div><div class="t">Abrir pantalla</div><div class="d">Para la TV de 85" · tecla F para pantalla completa</div></div></a>
+    <a class="fila" href="../registro/" target="_blank"><div><div class="t">Abrir registro</div><div class="d">La página que abre el QR del visitante</div></div></a>
+    <h2>Mantenimiento</h2>
+    <div class="fila peligro" id="filaBorrar">
+      <div><div class="t">Borrar todos los registros</div><div class="d">Vacía la base del evento. No se puede deshacer.</div></div>
+    </div>
+    <div class="controles" id="borrarPaso1"><button class="btn ancho" id="borrar">Borrar registros…</button></div>
+    <div class="confirmar" id="borrarPaso2" hidden>
+      <button class="btn" id="borrarNo">Cancelar</button>
+      <button class="btn rojo" id="borrarSi">Sí, borrar todo</button>
+    </div>
+  </section>
 </div>
+
+<nav>
+  <div class="in" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="tabRegistros">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>Registros</button>
+    <button role="tab" aria-selected="false" data-tab="tabEnviar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3.5 4.2 6 7.4 6 10.5A6 6 0 0 1 6 13.5C6 10.4 8.5 7.2 12 3z"/><path d="M12 10v6M9 13h6"/></svg>Enviar</button>
+    <button role="tab" aria-selected="false" data-tab="tabAjustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ajustes</button>
+  </div>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -71,50 +206,136 @@
 <script src="../assets/bus.js"></script>
 <script>
 (function () {
-  const { GRUPOS, NOMBRES } = DGGEL;
+  const { GRUPOS, NOMBRES, PATRONES } = DGGEL;
   const $ = id => document.getElementById(id);
-  if (BUS.DEMO) $('demo').textContent = 'MODO DEMO (sin Firebase)';
-  GRUPOS.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = NOMBRES[g]; $('grupo').appendChild(o); });
+  const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const vibra = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+  let toastT;
+  const toast = t => { $('toast').textContent = t; $('toast').classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => $('toast').classList.remove('on'), 2200); };
 
-  let pausa = false, mascara = true;
+  if (BUS.DEMO) { $('demo').hidden = false; }
+
+  // ---------- Conexión ----------
+  function conexion(ok) {
+    $('conexion').className = 'conexion ' + (ok ? 'on' : 'off');
+    $('conexion').querySelector('span').textContent = ok ? 'En línea' : 'Sin conexión';
+  }
+  if (BUS.DEMO) conexion(true);
+  else { try { firebase.database().ref('.info/connected').on('value', s => conexion(!!s.val())); } catch (e) { conexion(false); } }
+
+  // ---------- Pestañas ----------
+  document.querySelectorAll('nav [data-tab]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('nav [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+    ['tabRegistros', 'tabEnviar', 'tabAjustes'].forEach(id => $(id).hidden = id !== b.dataset.tab);
+    window.scrollTo({ top: 0 });
+  });
+
+  // ---------- Patrón en miniatura ----------
+  function patron(g) {
+    const p = PATRONES[g], svg = $('patron');
+    if (!p) { svg.innerHTML = ''; return; }
+    svg.innerHTML = p.map((pos, i) => {
+      const x = 4 + i * 16;
+      return `<rect x="${x}" y="1" width="10" height="32" rx="5" fill="#1f2327" stroke="#3a3f45"/>` +
+        (pos ? `<rect x="${x + 1.5}" y="9" width="7" height="4" rx="1.5" fill="#ff3b47"/>`
+             : `<ellipse cx="${x + 5}" cy="28" rx="3.5" ry="2.5" fill="#ff3b47"/>`);
+    }).join('');
+  }
+
+  // ---------- Estado de la pantalla ----------
+  let pausa = false, mascara = true, reposo = 10, estado = {};
+  function pintarEstado() {
+    const m = estado && estado.mostrando;
+    const chip = $('chipEstado');
+    if (pausa) { chip.className = 'chip pausa'; chip.textContent = 'Cola en pausa'; }
+    else if (m) { chip.className = 'chip vivo'; chip.textContent = 'En pantalla'; }
+    else { chip.className = 'chip'; chip.textContent = 'En espera'; }
+    $('ahoraNombre').textContent = m ? m.nombre : 'Nadie en pantalla';
+    $('ahoraGrupo').textContent = m ? (NOMBRES[m.grupo] || m.grupo) : 'Modo de espera';
+    patron(m ? m.grupo : null);
+    $('cola').textContent = (estado && estado.enCola) || 0;
+  }
+  BUS.onEstado(e => { estado = e || {}; pintarEstado(); });
+
+  const ICON_PAUSA = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+  const ICON_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z"/></svg>';
   BUS.onControl(c => {
     pausa = !!c.pausa;
     mascara = (typeof c.mascara === 'boolean') ? c.mascara : true;
-    $('mascara').textContent = 'Máscara virtual: ' + (mascara ? 'ENCENDIDA' : 'APAGADA');
-    $('mascara').className = mascara ? '' : 'rojo';
-    $('pausa').textContent = pausa ? 'Reanudar cola' : 'Pausar cola';
-    $('pausa').className = pausa ? 'rojo' : 'verde';
-    if (typeof c.reposo === 'number' && document.activeElement !== $('reposo')) $('reposo').value = c.reposo;
+    if (typeof c.reposo === 'number') reposo = c.reposo;
+    $('pausa').className = 'btn ' + (pausa ? 'ambar' : '');
+    $('pausa').innerHTML = pausa ? ICON_PLAY + 'Reanudar' : ICON_PAUSA + 'Pausar';
+    $('mascaraBtn').innerHTML = 'Máscara ' + (mascara ? '<span style="color:var(--verde)">ON</span>' : '<span style="color:var(--txt3)">OFF</span>');
+    $('mascaraSw').setAttribute('aria-checked', mascara);
+    $('reposo').textContent = reposo + ' s';
+    pintarEstado();
   });
-  $('pausa').onclick = () => BUS.setControl({ pausa: !pausa });
-  $('mascara').onclick = () => BUS.setControl({ mascara: !mascara });
-  $('reposo').onchange = () => BUS.setControl({ reposo: Math.max(3, Math.min(60, +$('reposo').value || 10)) });
+  $('pausa').onclick = () => { vibra(15); BUS.setControl({ pausa: !pausa }); toast(pausa ? 'Cola reanudada' : 'Cola en pausa'); };
+  const alternarMascara = () => { vibra(15); BUS.setControl({ mascara: !mascara }); toast(mascara ? 'Máscara virtual apagada' : 'Máscara virtual encendida'); };
+  $('mascaraBtn').onclick = alternarMascara;
+  $('mascaraSw').onclick = alternarMascara;
+  const setReposo = v => { reposo = Math.max(3, Math.min(60, v)); $('reposo').textContent = reposo + ' s'; BUS.setControl({ reposo }); };
+  $('menos').onclick = () => setReposo(reposo - (reposo > 10 ? 5 : 1));
+  $('mas').onclick = () => setReposo(reposo + (reposo >= 10 ? 5 : 1));
 
-  BUS.onEstado(e => {
-    const m = e && e.mostrando;
-    $('mostrando').innerHTML = (m ? `${m.nombre} · ${NOMBRES[m.grupo] || m.grupo}` : 'En espera') + '<small>en pantalla</small>';
-    $('cola').innerHTML = (e && e.enCola || 0) + '<small>en cola</small>';
-  });
-
+  // ---------- Reproducir ----------
   function reproducir(nombre, grupo) {
-    return BUS.setControl({ reproducir: { id: Date.now().toString(36), nombre, grupo, ts: Date.now() } });
+    vibra(25);
+    return BUS.setControl({ reproducir: { id: Date.now().toString(36), nombre, grupo, ts: Date.now() } })
+      .then(() => toast(`${nombre.split(' ')[0]} va a la pantalla`));
   }
-  $('enviar').onclick = () => { const n = $('nombre').value.trim(); if (n.length < 2) return; reproducir(n, $('grupo').value); $('nombre').value = ''; };
 
-  BUS.recientes(arr => {
-    $('lista').innerHTML = arr.map(r => {
+  // ---------- Registros ----------
+  let registros = [];
+  function pintarLista() {
+    const q = $('buscar').value.trim().toLowerCase();
+    const filtrados = registros.filter(r => !q || (r.nombre || '').toLowerCase().includes(q)).slice(0, 60);
+    $('lista').innerHTML = filtrados.length ? filtrados.map(r => {
       const h = new Date(r.ts || Date.now()).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-      return `<tr><td>${h}</td><td>${(r.nombre || '').replace(/[<>&]/g, '')}</td><td>${NOMBRES[r.grupo] || r.grupo}</td><td><button data-n="${encodeURIComponent(r.nombre)}" data-g="${r.grupo}">Repetir</button></td></tr>`;
-    }).join('');
-  }, 40);
+      return `<div class="reg"><div class="n">${esc(r.nombre)}</div>
+        <div class="m"><span class="g">${esc(r.grupo)}</span><span>${h}</span></div>
+        <button data-n="${encodeURIComponent(r.nombre || '')}" data-g="${esc(r.grupo)}">Repetir</button></div>`;
+    }).join('') : `<div class="vacio">${q ? 'Nadie con ese nombre' : 'Aún no hay registros'}</div>`;
+    // estadísticas
+    const cuenta = {}; GRUPOS.forEach(g => cuenta[g] = 0);
+    registros.forEach(r => { if (cuenta[r.grupo] !== undefined) cuenta[r.grupo]++; });
+    $('total').textContent = registros.length;
+    $('stats').innerHTML = GRUPOS.map(g => `<div class="stat"><b>${cuenta[g]}</b><span>${g}</span></div>`).join('');
+  }
+  BUS.recientes(arr => { registros = arr || []; pintarLista(); }, 1000);
+  $('buscar').oninput = pintarLista;
   $('lista').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     reproducir(decodeURIComponent(b.dataset.n), b.dataset.g);
   });
 
-  $('borrar').onclick = () => $('peligro').classList.add('on');
-  $('borrarNo').onclick = () => $('peligro').classList.remove('on');
-  $('borrarSi').onclick = () => { BUS.borrarTodo(); $('peligro').classList.remove('on'); if (BUS.DEMO) BUS.recientes(a => {}, 1), location.reload(); };
+  // ---------- Enviar a mano ----------
+  let grupoSel = null;
+  GRUPOS.forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'gbtn'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `${g.replace(/[+-]$/, '')}<small>${g.endsWith('+') ? 'positivo' : 'negativo'}</small>`;
+    b.onclick = () => { grupoSel = g; document.querySelectorAll('.gbtn').forEach(x => x.setAttribute('aria-pressed', x === b)); valida(); };
+    $('gridGrupos').appendChild(b);
+  });
+  const valida = () => $('enviar').disabled = !(grupoSel && $('nombre').value.trim().length >= 2);
+  $('nombre').oninput = valida;
+  $('enviar').onclick = () => {
+    const n = $('nombre').value.trim().slice(0, 28); if (n.length < 2 || !grupoSel) return;
+    reproducir(n, grupoSel);
+    $('nombre').value = ''; grupoSel = null; document.querySelectorAll('.gbtn').forEach(x => x.setAttribute('aria-pressed', 'false')); valida();
+    $('nombre').blur();
+  };
+
+  // ---------- Borrar ----------
+  $('borrar').onclick = () => { $('borrarPaso1').hidden = true; $('borrarPaso2').hidden = false; };
+  $('borrarNo').onclick = () => { $('borrarPaso1').hidden = false; $('borrarPaso2').hidden = true; };
+  $('borrarSi').onclick = () => {
+    BUS.borrarTodo().then(() => { toast('Registros borrados'); if (BUS.DEMO) { registros = []; pintarLista(); } });
+    $('borrarPaso1').hidden = false; $('borrarPaso2').hidden = true;
+  };
+
+  pintarEstado(); pintarLista();
 })();
 </script>
 </body>
