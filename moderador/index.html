@@ -112,6 +112,16 @@
   .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); background: #fff; color: #000; font-weight: 700; padding: 12px 18px; border-radius: 99px; opacity: 0; transition: .25s; pointer-events: none; z-index: 20; white-space: nowrap; }
   .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
   .demo { background: #ffe58a; color: #3b2d00; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px; }
+
+  /* QR a pantalla completa */
+  .qrOver { position: fixed; inset: 0; background: #000; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); text-align: center; }
+  .qrOver[hidden] { display: none; }
+  .qrOver img.logo { height: 34px; }
+  .qrOver img.qr { width: min(86vw, 62vh); height: auto; }
+  .qrOver h3 { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 800; color: #fff; }
+  .qrOver h3 b { color: var(--rojo2); }
+  .qrOver p { margin: 0; color: #b8bec5; font-size: 16px; font-weight: 600; }
+  .qrOver .cerrar { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: var(--card2); color: #fff; font-size: 26px; line-height: 1; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -137,6 +147,7 @@
     <div class="controles">
       <button class="btn" id="pausa"></button>
       <button class="btn" id="mascaraBtn"></button>
+      <button class="btn rojo ancho" id="qrBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg>Mostrar QR para visitantes</button>
     </div>
   </div>
 
@@ -197,6 +208,13 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ajustes</button>
   </div>
 </nav>
+<div class="qrOver" id="qrOver" hidden role="dialog" aria-label="QR de registro">
+  <button class="cerrar" id="qrCerrar" aria-label="Cerrar">×</button>
+  <img class="logo" src="../assets/licon_logo.png" alt="LICON">
+  <h3>Escribe tu historia<br>en <b>cada gota</b></h3>
+  <img class="qr" src="../assets/qr_registro.svg" alt="QR de registro">
+  <p>Escanea con la cámara de tu celular</p>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -337,6 +355,25 @@
 
   pintarEstado(); pintarLista();
 })();
+  // QR para visitantes: pantalla completa y pantalla encendida
+  (function () {
+    const over = document.getElementById('qrOver'); let lock = null;
+    async function abrir() {
+      over.hidden = false;
+      try { if (navigator.wakeLock) lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+      try { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); } catch (e) {}
+    }
+    function cerrar() {
+      over.hidden = true;
+      try { lock && lock.release(); } catch (e) {} lock = null;
+      try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+    }
+    document.getElementById('qrBtn').onclick = abrir;
+    document.getElementById('qrCerrar').onclick = cerrar;
+    document.addEventListener('visibilitychange', async () => {
+      if (!over.hidden && document.visibilityState === 'visible' && navigator.wakeLock) { try { lock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+    });
+  })();
 </script>
 </body>
 </html>
