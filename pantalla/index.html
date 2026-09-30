@@ -12,6 +12,8 @@
   /* Máscara virtual (foto de la tarjeta): se apaga desde el moderador o con la tecla M cuando está puesta la máscara física */
   #mascara { transition: opacity .4s; }
   body.sin-mascara #mascara { opacity: 0; }
+  #guia { display: none; }
+  body.calibrar #guia { display: inline; }
 
   .gota { transform-box: fill-box; transform-origin: center; transform: scale(0); opacity: 0;
           transition: transform .45s cubic-bezier(.2,.9,.3,1.3), opacity .3s; }
@@ -59,6 +61,7 @@
     <filter id="desenfoque"><feGaussianBlur stdDeviation="1.2"/></filter>
   </defs>
   <rect x="-200" y="-200" width="2272" height="1453" fill="#000"/>
+  <g id="ajuste">
   <g id="escala" transform="translate(310.063 57.480) scale(0.864553)">
   <g id="tarjeta">
     <!-- 1. Lo que asoma por las ventanas: gel con sangrado y ventana blanca del nombre -->
@@ -71,6 +74,9 @@
     <g id="franja"></g>
     <!-- 4. Máscara virtual: la foto de la tarjeta con los huecos transparentes -->
     <image id="mascara" href="../assets/foto/mascara.png" x="0" y="0" width="1448" height="1086"/>
+  </g>
+  <!-- 5. Guía de calibración: ventanas en verde con borde rojo, todo lo demás negro -->
+  <image id="guia" href="../assets/foto/guia.png" x="0" y="0" width="1448" height="1086"/>
   </g>
   </g>
 </svg>
@@ -296,8 +302,32 @@
       encolar({ nombre: c.reproducir.nombre, grupo: c.reproducir.grupo }, true);
     }
     if (typeof c.mascara === 'boolean') document.body.classList.toggle('sin-mascara', !c.mascara);
+    if (c.ajuste) aplicaAjuste(c.ajuste);
+    document.body.classList.toggle('calibrar', !!c.calibrar);
     if (c.borrado) { cola.length = 0; publicar(null); }
     publicar(null);
+  });
+
+  // ---------- Ajuste de tamaño y posición (calibración en sitio) ----------
+  // escala horizontal/vertical alrededor del centro de la tarjeta y desplazamiento en mm
+  var ajuste = { ancho: 1, alto: 1, dx: 0, dy: 0 };
+  function aplicaAjuste(a) {
+    ajuste = Object.assign({ ancho: 1, alto: 1, dx: 0, dy: 0 }, a || {});
+    const cx = 936, cy = 526.9;
+    document.getElementById('ajuste').setAttribute('transform',
+      `translate(${cx + ajuste.dx} ${cy + ajuste.dy}) scale(${ajuste.ancho} ${ajuste.alto}) translate(${-cx} ${-cy})`);
+  }
+  // Ajuste fino desde el teclado de la computadora de la pantalla: flechas mueven, + / - tamaño, G guía
+  document.addEventListener('keydown', e => {
+    const paso = e.shiftKey ? 10 : 2, pe = e.shiftKey ? 0.02 : 0.005; let cambio = true;
+    const a = Object.assign({}, ajuste);
+    if (e.key === 'ArrowLeft') a.dx -= paso; else if (e.key === 'ArrowRight') a.dx += paso;
+    else if (e.key === 'ArrowUp') a.dy -= paso; else if (e.key === 'ArrowDown') a.dy += paso;
+    else if (e.key === '+' || e.key === '=') { a.ancho += pe; a.alto += pe; }
+    else if (e.key === '-' || e.key === '_') { a.ancho -= pe; a.alto -= pe; }
+    else if (e.key.toLowerCase() === 'g') { BUS.setControl({ calibrar: !document.body.classList.contains('calibrar') }); cambio = false; }
+    else cambio = false;
+    if (cambio) { e.preventDefault(); a.ancho = +a.ancho.toFixed(3); a.alto = +a.alto.toFixed(3); aplicaAjuste(a); BUS.setControl({ ajuste: a }); }
   });
 
   // ---------- Teclas de prueba ----------
