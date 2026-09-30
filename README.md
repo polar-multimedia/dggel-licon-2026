@@ -24,7 +24,7 @@ Stack Polar: GitHub Pages + Firebase Realtime Database (ver skill `polar-event-d
    forman un botón en el fondo.
 3. Se escribe a mano el nombre y el grupo (fuente Shadows Into Light, trazo por trazo con opentype.js).
 4. Reposo configurable (10 s por default) y sigue el siguiente de la cola; sin cola, modo espera
-   con la leyenda "Escanea el código y escribe tu historia".
+   con la leyenda "Escribe tu historia en cada gota".
 
 Los ocho patrones están en `assets/tipos.js` y siguen la "Gráfica grupos sanguíneos" de LICON
 (columnas A · B · AB · D · D* · Ctl · N/A1 · N/B).
@@ -46,14 +46,16 @@ Los ocho patrones están en `assets/tipos.js` y siguen la "Gráfica grupos sangu
   (botón negativo en el fondo, línea positiva fina/gruesa sobre el gel, arrastre en el cuello).
 - Coordenadas de trabajo: píxeles de la foto (1448 × 1086); el SVG de la pantalla usa ese viewBox y se centra en 16:9.
 
-## Máscara física
+## Máscara física y montaje (escala definitiva)
 
-`assets/mascara_85.svg` es la guía de corte 1:1 en milímetros, generada desde la misma foto que dibuja
-la pantalla (área activa de referencia 1872 × 1053 mm para una 85" 16:9): capa de arte = la foto impresa
-(rectángulo azul), capa de corte = 8 interiores de tubo + ventana del nombre (rojo).
-**Confirmar el área activa del modelo de TV antes de cortar**; si difiere, escalar el archivo
-proporcionalmente. La máscara debe extenderse más allá del área activa para cubrir marco y estructura.
-La banda de etiquetas, códigos y pie van impresos en la máscara, no en pantalla.
+- Tarjeta recortada con su forma en **una sola pieza de 1200 × 857 mm** (material de 1.20 m), centrada en la pantalla:
+  contorno en x 336, y 98 mm del área activa.
+- La pantalla dibuja la foto (1448 × 1086) a 0.8646 mm/px con su esquina en (310.1, 57.5) mm.
+- Hueco de la mampara: **1120 × 730 mm** en x 376, y 104 (5 a 6 mm dentro del contorno de la tarjeta).
+- Sangrado del gel en pantalla: ± 19 mm alrededor de cada ventana.
+- `assets/mascara_85.svg`: montaje 1:1 en mm (área activa, hueco, corte de la tarjeta y ventanas).
+- Archivos de impresión y corte: carpeta `Activacion DGgel/Impresion` (PDF 1:1 con CutContour, solo corte PDF/SVG, plano A3 1:10).
+**Confirmar el área activa del modelo de TV antes de cortar.**
 
 ## Firebase
 
